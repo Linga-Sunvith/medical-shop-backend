@@ -1,26 +1,30 @@
 # app/routers/medicine_router.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.schemas import Medicine, MedicineCreate
-from app.services.medicine_service import fetch_medicines, fetch_medicine_by_id, add_medicine
+from app.schemas.schemas import Medicine, MedicineCreate
+from app.repositories.medicine_repo import get_filtered_medicines, create_medicine, update_medicine, delete_medicine
 from app.database import get_db
 
 router = APIRouter()
 
 @router.get("/medicines", response_model=list[Medicine])
-def get_medicines(skip: int = 0, limit: int = 10, query: str = None, db: Session = Depends(get_db)):
-    if query:
-        # If a search query is provided, filter medicines by name using 'ilike' for case-insensitive search
-        return db.query(Medicine).filter(Medicine.name.ilike(f"%{query}%")).offset(skip).limit(limit).all()
-    return fetch_medicines(db, skip, limit)
+def get_medicines(search_query: str = None, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    return get_filtered_medicines(db, search_query, skip, limit)
 
-
-# Fetch medicine by ID
-@router.get("/medicines/{medicine_id}", response_model=Medicine)
-def get_medicine_by_id(medicine_id: int, db: Session = Depends(get_db)):
-    return fetch_medicine_by_id(db, medicine_id)
-
-# Add a new medicine
 @router.post("/medicines", response_model=Medicine)
-def create_medicine(medicine: MedicineCreate, db: Session = Depends(get_db)):
-    return add_medicine(db, medicine.name, medicine.formula, medicine.purpose, medicine.box_location)
+def create_medicine_api(medicine: MedicineCreate, db: Session = Depends(get_db)):
+    return create_medicine(db, Medicine(**medicine.dict()))
+
+@router.put("/medicines/{medicine_id}", response_model=Medicine)
+def update_medicine_api(medicine_id: int, medicine: MedicineCreate, db: Session = Depends(get_db)):
+    updated_medicine = update_medicine(db, medicine_id, medicine.dict())
+    if not updated_medicine:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    return updated_medicine
+
+@router.delete("/medicines/{medicine_id}")
+def delete_medicine_api(medicine_id: int, db: Session = Depends(get_db)):
+    deleted_medicine = delete_medicine(db, medicine_id)
+    if not deleted_medicine:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    return {"message": "Medicine deleted successfully"}
