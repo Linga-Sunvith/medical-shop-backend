@@ -2,57 +2,54 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models.models import Medicine
-import logging
 
-logger = logging.getLogger("medical-shop-backend")
-
-def get_filtered_medicines(db: Session, search_query: str = None, skip: int = 0, limit: int = 10):
-    try:
-        query = db.query(Medicine)
-        if search_query:
-            query = query.filter(
-                or_(
-                    Medicine.name.ilike(f"%{search_query}%"),
-                    Medicine.formula.ilike(f"%{search_query}%"),
-                    Medicine.purpose.ilike(f"%{search_query}%")
-                )
+def get_medicines(db: Session, search_query: str = None, skip: int = 0, limit: int = 10):
+    query = db.query(Medicine)
+    if search_query:
+        query = query.filter(
+            or_(
+                Medicine.name.ilike(f"%{search_query}%"),
+                Medicine.formula.ilike(f"%{search_query}%"),
+                Medicine.purpose.ilike(f"%{search_query}%"),
             )
-        return query.offset(skip).limit(limit).all()
-    except Exception as e:
-        logger.error(f"Error in get_filtered_medicines: {e}")
-        raise
+        )
+    return query.offset(skip).limit(limit).all()
 
-def create_medicine(db: Session, medicine: Medicine):
+# def create_medicine(db: Session, medicine_data: dict):
+#     medicine = Medicine(**medicine_data)
+#     db.add(medicine)
+#     db.commit()
+#     db.refresh(medicine)
+#     return medicine
+def create_medicine(db: Session, medicine_data: dict):
     try:
+        print("Attempting to create medicine with:", medicine_data)
+        medicine = Medicine(**medicine_data)
         db.add(medicine)
         db.commit()
+        print("Commit successful!")
         db.refresh(medicine)
+        print("Refreshed medicine:", medicine)
         return medicine
     except Exception as e:
-        logger.error(f"Error in create_medicine: {e}")
+        db.rollback()
+        print("Error in create_medicine:", e)
         raise
 
 def update_medicine(db: Session, medicine_id: int, updated_data: dict):
-    try:
-        db_medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
-        if not db_medicine:
-            return None
-        for key, value in updated_data.items():
-            setattr(db_medicine, key, value)
-        db.commit()
-        db.refresh(db_medicine)
-        return db_medicine
-    except Exception as e:
-        logger.error(f"Error in update_medicine: {e}")
-        raise
+    medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
+    if not medicine:
+        return None
+    for key, value in updated_data.items():
+        setattr(medicine, key, value)
+    db.commit()
+    db.refresh(medicine)
+    return medicine
 
 def delete_medicine(db: Session, medicine_id: int):
-    try:
-        db_medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
-        if db_medicine:
-            db.delete(db_medicine)
-            db.commit()
-        return db_medicine
-    except Exception as e:
-        logger.error(f"Error in delete_medicine: {e}")
-        raise
+    medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
+    if medicine:
+        db.delete(medicine)
+        db.commit()
+        return medicine
+    return None

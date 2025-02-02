@@ -9,8 +9,9 @@ class MedicineBase(BaseModel):
 class MedicineCreate(MedicineBase):
     pass
 
-class Medicine(MedicineBase):
+class MedicineResponse(MedicineBase):
     id: int
 
     class Config:
         from_attributes = True
+

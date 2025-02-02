@@ -1,60 +1,41 @@
 # app/services/medicine_service.py
+# from sqlalchemy.orm import Session
+# from app.repositories.medicine_repo import (
+#     get_filtered_medicines,
+#     create_medicine,
+#     update_medicine,
+#     delete_medicine,
+# )
+# from app.models.models import Medicine
+#
+# def fetch_medicines(db: Session, search_query: str = None, skip: int = 0, limit: int = 10):
+#     return get_filtered_medicines(db, search_query, skip, limit)
+#
+# def add_medicine(db: Session, medicine_data: dict):
+#     medicine = Medicine(**medicine_data)
+#     return create_medicine(db, medicine)
+#
+# def modify_medicine(db: Session, medicine_id: int, updated_data: dict):
+#     return update_medicine(db, medicine_id, updated_data)
+#
+# def remove_medicine(db: Session, medicine_id: int):
+#     return delete_medicine(db, medicine_id)
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from app.models.models import Medicine
-import logging
+from app.repositories.medicine_repo import (
+    get_medicines as repo_get_medicines,
+    create_medicine as repo_create_medicine,
+    update_medicine as repo_update_medicine,
+    delete_medicine as repo_delete_medicine,
+)
 
-logger = logging.getLogger("medical-shop-backend")
+def fetch_medicines(db: Session, search_query: str = None, skip: int = 0, limit: int = 10):
+    return repo_get_medicines(db, search_query, skip, limit)
 
-def get_filtered_medicines(db: Session, search_query: str = None, skip: int = 0, limit: int = 10):
-    try:
-        query = db.query(Medicine)
-        if search_query:
-            query = query.filter(
-                or_(
-                    Medicine.name.ilike(f"%{search_query}%"),
-                    Medicine.formula.ilike(f"%{search_query}%"),
-                    Medicine.purpose.ilike(f"%{search_query}%")
-                )
-            )
-        return query.offset(skip).limit(limit).all()
-    except Exception as e:
-        logger.error(f"Error in get_filtered_medicines: {e}")
-        raise
+def add_medicine(db: Session, medicine_data: dict):
+    return repo_create_medicine(db, medicine_data)
 
-def create_medicine(db: Session, medicine: Medicine):
-    try:
-        db.add(medicine)
-        db.commit()
-        db.refresh(medicine)
-        return medicine
-    except Exception as e:
-        logger.error(f"Error in create_medicine: {e}")
-        raise
+def modify_medicine(db: Session, medicine_id: int, medicine_data: dict):
+    return repo_update_medicine(db, medicine_id, medicine_data)
 
-def update_medicine(db: Session, medicine_id: int, updated_data: dict):
-    try:
-        db_medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
-        if not db_medicine:
-            return None
-        for key, value in updated_data.items():
-            setattr(db_medicine, key, value)
-        db.commit()
-        db.refresh(db_medicine)
-        return db_medicine
-    except Exception as e:
-        logger.error(f"Error in update_medicine: {e}")
-        raise
-
-def delete_medicine(db: Session, medicine_id: int):
-    try:
-        db_medicine = db.query(Medicine).filter(Medicine.id == medicine_id).first()
-        if db_medicine:
-            db.delete(db_medicine)
-            db.commit()
-        return db_medicine
-    except Exception as e:
-        logger.error(f"Error in delete_medicine: {e}")
-        raise
-
-
+def remove_medicine(db: Session, medicine_id: int):
+    return repo_delete_medicine(db, medicine_id)
